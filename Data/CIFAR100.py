@@ -1,5 +1,3 @@
-import tensorflow as tf
-import numpy as np
 import matplotlib.pyplot as plt
 from tensorflow.keras.datasets.cifar100 import load_data
 import ssl
