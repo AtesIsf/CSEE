@@ -109,6 +109,6 @@ labels = (
 )
 
 if __name__ == "__main__":
-    print(labels[y_test[0][0]])
     plt.imshow(x_test[0])
+    plt.title(labels[y_test[0][0]])
     plt.show()

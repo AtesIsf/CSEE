@@ -1,4 +1,0 @@
-https://www.kaggle.com/datasets/alxmamaev/flowers-recognition
-https://www.kaggle.com/datasets/imbikramsaha/caltech-101
-https://www.kaggle.com/datasets/iamsouravbanerjee/animal-image-dataset-90-different-animals
-https://www.kaggle.com/datasets/techsash/waste-classification-data
