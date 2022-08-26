@@ -1,7 +1,5 @@
 import matplotlib.pyplot as plt
 from tensorflow.keras.datasets.cifar100 import load_data
-import ssl
-ssl._create_default_https_context = ssl._create_unverified_context
 
 (x_train, y_train), (x_test, y_test) = load_data()
 
@@ -109,6 +107,7 @@ labels = (
 )
 
 if __name__ == "__main__":
-    plt.imshow(x_test[0])
-    plt.title(labels[y_test[0][0]])
-    plt.show()
+    for i in range(10):
+        plt.imshow(x_train[i])
+        plt.title(labels[y_train[i][0]]) # All labels are 1 element arrays
+        plt.show()

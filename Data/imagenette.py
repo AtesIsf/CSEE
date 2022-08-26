@@ -1,9 +1,6 @@
 from datasets import load_dataset
 import matplotlib.pyplot as plt
-import ssl
 from tqdm import tqdm
-
-ssl._create_default_https_context = ssl._create_unverified_context
 
 imagenette_ds = load_dataset("frgfm/imagenette", "320px").shuffle()
 IMAGENETTE_SHAPE = (426, 320)

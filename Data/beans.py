@@ -1,8 +1,5 @@
 from datasets import load_dataset
 import matplotlib.pyplot as plt
-import ssl
-
-ssl._create_default_https_context = ssl._create_unverified_context
 
 beans_ds = load_dataset("beans").shuffle()
 BEANS_SHAPE = (500, 500)
@@ -24,7 +21,7 @@ beans_labels = (
 if __name__ == "__main__":
     # print(_beans_builder.info.features)
     # print(beans_ds.keys())
-    for i in range(5):
+    for i in range(10):
         plt.imshow(beans_ds["train"][i]["image"])
         plt.title(beans_labels[beans_ds["train"][i]["labels"]])
         plt.show()
