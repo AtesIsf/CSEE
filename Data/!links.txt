@@ -1,4 +1,4 @@
-https://www.tensorflow.org/datasets/catalog/cifar100
+https://huggingface.co/datasets/cifar100
 https://huggingface.co/datasets/frgfm/imagenette
 https://huggingface.co/datasets/beans/viewer/default/train
 https://huggingface.co/datasets/Bingsu/Gameplay_Images
