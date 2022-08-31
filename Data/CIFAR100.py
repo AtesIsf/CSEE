@@ -25,9 +25,9 @@ CIFAR_SHAPE = (32, 32)
 
 # Splits: train, test
 ''' Format (I will use the fine labels)
-  'img': PIL Image
-  'fine_label': int 
-  'coarse_label': int
+    'img': PIL Image
+    'fine_label': int 
+    'coarse_label': int
 '''
 
 if __name__ == "__main__":
