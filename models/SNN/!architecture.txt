@@ -1,1 +1,0 @@
-The architecture to be used in all of the SNN models:

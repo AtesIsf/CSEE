@@ -1,8 +1,9 @@
 from datasets import load_dataset
 import matplotlib.pyplot as plt
+import numpy as np
 
-beans_ds = load_dataset("beans").shuffle()
-BEANS_SHAPE = (500, 500)
+ds = load_dataset("beans").shuffle()
+SHAPE = (500, 500, 3)
 # _beans_builder = load_dataset_builder("beans")
 # dict_keys(['train', 'validation', 'test'])
 
@@ -12,7 +13,7 @@ BEANS_SHAPE = (500, 500)
     'labels': 1
 '''
 
-beans_labels = (
+labels = (
     "Angular Leaf Spot",
     "Bean Rust",
     "Healthy"
@@ -20,8 +21,8 @@ beans_labels = (
 
 if __name__ == "__main__":
     # print(_beans_builder.info.features)
-    # print(beans_ds.keys())
+    # print(ds.keys())
     for i in range(10):
-        plt.imshow(beans_ds["train"][i]["image"])
-        plt.title(beans_labels[beans_ds["train"][i]["labels"]])
+        plt.imshow(ds["train"][i]["image"])
+        plt.title(labels[ds["train"][i]["labels"]])
         plt.show()
