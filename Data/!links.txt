@@ -1,7 +1,7 @@
 https://huggingface.co/datasets/cifar100
 https://huggingface.co/datasets/frgfm/imagenette
-https://huggingface.co/datasets/beans/viewer/default/train
+https://huggingface.co/datasets/beans
 https://huggingface.co/datasets/Bingsu/Gameplay_Images
-https://huggingface.co/datasets/frgfm/imagewoof/viewer/full_size/train
+https://huggingface.co/datasets/frgfm/imagewoof
 https://www.tensorflow.org/datasets/catalog/deep_weeds
 https://www.tensorflow.org/datasets/catalog/colorectal_histology
