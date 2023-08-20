@@ -13,8 +13,8 @@ from tensorflow.keras.layers import Dense, Flatten, Conv2D, Input
 def get_models(n_labels, img_shape):
 
     inp = Input(shape=img_shape)
-    conv1 = Conv2D(16, kernel_size=(5, 5),activation=tf.nn.relu, padding="same") (inp)
-    conv2 = Conv2D(16, kernel_size=(5, 5), activation=tf.nn.relu, padding="same") (conv1)
+    conv1 = Conv2D(64, kernel_size=(5, 5),activation=tf.nn.relu, padding="same") (inp)
+    conv2 = Conv2D(32, kernel_size=(5, 5), activation=tf.nn.relu, padding="same") (conv1)
     flat = Flatten() (conv2)
     out = Dense(n_labels, activation=tf.keras.activations.linear) (flat)
 
