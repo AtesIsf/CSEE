@@ -43,6 +43,7 @@ snn_y_test = np.tile(snn_y_test, (1, 2, 1))
 
 converter, inp, out = models.get_models(len(beans.labels), beans.SHAPE)
 
+# Change to load params instead
 do_training = True
 
 # -Train
@@ -80,6 +81,11 @@ if do_training:
     converter.model.fit(x_train, y_train, epochs=N_EPOCHS, batch_size=BATCH_SIZE, validation_data=(x_test, y_test))
     ann_end = time()
 
+    converter.model.save("Params/beans_ann.keras")
+
+else:
+    converter.model = tf.keras.models.load_model("Params/beans_ann.keras")
+
 # SNN Predict
 with nengo_dl.Simulator(converter.net, minibatch_size=16, progress_bar=True) as nengo_sim:
     nengo_sim.load_params("Params/beans_snn")
@@ -89,8 +95,12 @@ with nengo_dl.Simulator(converter.net, minibatch_size=16, progress_bar=True) as 
 # compute accuracy on test data, using output of network on the last timestep
 snn_predictions = np.argmax(data[converter.outputs[out]][:, -1], axis=-1)
 snn_accuracy = (snn_predictions == y_test[:len(x_test)[0]]).mean()
-print(f"SNN Test Accuracy: {100 * snn_accuracy:.2f}%\nSNN Training Time: {snn_end-snn_start}")
+print(f"SNN Test Accuracy: {100 * snn_accuracy:.2f}%")
+if do_training:
+    print(f"SNN Training Time: {snn_end-snn_start:.2f}s")
 
 # ANN Predict
 ann_loss, ann_accuracy = converter.model.evaluate(x_test, y_test)
-print(f"ANN Test Accuracy: {100 * ann_accuracy:.2f}%\nANN Training Time: {ann_end-ann_start}")
+print(f"ANN Test Accuracy: {100 * ann_accuracy:.2f}%")
+if do_training:
+    print(f"ANN Training Time: {ann_end-ann_start:.2f}s")

@@ -13,16 +13,19 @@ from tensorflow.keras.layers import Dense, Flatten, Conv2D, Input
 def get_models(n_labels, img_shape):
 
     inp = Input(shape=img_shape)
-    conv1 = Conv2D(128, kernel_size=(5, 5),activation=tf.nn.relu, padding="same") (inp)
-    conv2 = Conv2D(128, kernel_size=(5, 5), activation=tf.nn.relu, padding="same") (conv1)
+    conv1 = Conv2D(16, kernel_size=(5, 5),activation=tf.nn.relu, padding="same") (inp)
+    conv2 = Conv2D(16, kernel_size=(5, 5), activation=tf.nn.relu, padding="same") (conv1)
     flat = Flatten() (conv2)
-    out = Dense(n_labels, activation=tf.nn.relu) (flat)
+    out = Dense(n_labels, activation=tf.keras.activations.linear) (flat)
 
     model = Model(inputs=[inp], outputs=[out])
 
     # converter.model->ann, converter.net->snn
     converter = nengo_dl.Converter(
-        model, swap_activations={tf.nn.relu: nengo.SpikingRectifiedLinear()},
+        model, swap_activations={
+            tf.nn.relu: nengo.SpikingRectifiedLinear(),
+            tf.keras.activations.linear: nengo.LIF()
+        },
         scale_firing_rates=10, synapse=0.01 # Reduces noise and makes the output clearer
     )
 
