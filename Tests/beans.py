@@ -9,30 +9,23 @@ import numpy as np
 import Models.models as models
 import Data.beans as beans
 
-from scipy.ndimage import zoom
 from tensorflow.keras.utils import to_categorical
-from time import time
 
-BATCH_SIZE = 16
-N_EPOCHS = 6
+BATCH_SIZE = 8
+N_EPOCHS = 5
 SCALE_FACTOR = 0.3
 TARGET_SHAPE = (int(beans.SHAPE[0] * SCALE_FACTOR), int(beans.SHAPE[1] * SCALE_FACTOR), 3)
-
-def condense_image(image):
-    reduced_image = zoom(image, (SCALE_FACTOR, SCALE_FACTOR, 1))
-    min_value = np.min(reduced_image)
-    max_value = np.max(reduced_image)
-    reduced_image = ((reduced_image - min_value) / (max_value - min_value))
-    return reduced_image
+N_TEST_TIME_STEPS = 20
+N_TRAIN_TIME_STEPS = 4
 
 def get_data():
     x_train = np.zeros((len(beans.ds["train"]), *TARGET_SHAPE))
     for i in range(len(beans.ds["train"])):
-        x_train[i] = condense_image(np.array(beans.ds["train"][i]["image"]))
+        x_train[i] = models.condense_image(np.array(beans.ds["train"][i]["image"]), SCALE_FACTOR)
 
     x_test = np.zeros((len(beans.ds["test"]), *TARGET_SHAPE))
     for i in range(len(beans.ds["test"])):
-        x_test[i] = condense_image(np.array(beans.ds["test"][i]["image"]))
+        x_test[i] = models.condense_image(np.array(beans.ds["test"][i]["image"]), SCALE_FACTOR)
 
     y_train = np.zeros(len(beans.ds["train"]))
     for i in range(len(beans.ds["train"])):
@@ -49,83 +42,68 @@ y_train = to_categorical(y_train, len(beans.labels))
 y_test = to_categorical(y_test, len(beans.labels))
 
 # Add a time axis
-snn_x_train = x_train.reshape((x_train.shape[0], 1, -1))
-snn_x_test = x_test.reshape((x_test.shape[0], 1, -1))
-snn_y_train = y_train.reshape((y_train.shape[0], 1, -1))
-snn_y_test = y_test.reshape((y_test.shape[0], 1, -1))
+nengo_x_train = x_train.reshape((x_train.shape[0], 1, -1))
+nengo_x_test = x_test.reshape((x_test.shape[0], 1, -1))
+nengo_y_train = y_train.reshape((y_train.shape[0], 1, -1))
+nengo_y_test = y_test.reshape((y_test.shape[0], 1, -1))
 
-# 2 time steps
-snn_x_train = np.tile(snn_x_train, (1, 2, 1))
-snn_x_test = np.tile(snn_x_test, (1, 2, 1))
-snn_y_train = np.tile(snn_y_train, (1, 2, 1))
-snn_y_test = np.tile(snn_y_test, (1, 2, 1))
+nengo_x_train = np.tile(nengo_x_train, (1, N_TRAIN_TIME_STEPS, 1))
+nengo_x_test = np.tile(nengo_x_test, (1, N_TRAIN_TIME_STEPS, 1))
+nengo_y_train = np.tile(nengo_y_train, (1, N_TRAIN_TIME_STEPS, 1))
+nengo_y_test = np.tile(nengo_y_test, (1, N_TRAIN_TIME_STEPS, 1))
 
+tiled_x_test = np.tile(nengo_x_test, (1, N_TEST_TIME_STEPS, 1))
+tiled_y_test = np.tile(y_test, N_TEST_TIME_STEPS)
+
+# inp->Node, out->KerasTensor, converter.outputs[out]->Probe
 converter, inp, out = models.get_models(len(beans.labels), TARGET_SHAPE)
 
-# Change to load params instead
-do_training = True
-
-# -Train
-if do_training:
-
-    # SNN train
-    with nengo_dl.Simulator(converter.net, minibatch_size=BATCH_SIZE, progress_bar=True) as sim:
-        sim.compile(
-            optimizer="adam",
-            loss=tf.keras.losses.CategoricalCrossentropy(),
-            metrics=["accuracy"],
-        )
-
-        snn_start = time()
-        sim.fit(
-            {converter.inputs[inp]: snn_x_train},
-            {converter.outputs[out]: snn_y_train},
-            validation_data=(
-                {converter.inputs[inp]: snn_x_test},
-                {converter.outputs[out]: snn_y_test},
-            ),
-            epochs=N_EPOCHS, verbose=1
-        )
-        snn_end = time()
-
-        sim.save_params("Params/beans_snn")
-
-    # ANN Train
-    converter.model.compile(
-        optimizer="adam", 
-        loss=tf.keras.losses.CategoricalCrossentropy(), 
-        metrics=["accuracy"]
+# Equ nengo ANN Train & Test
+with nengo_dl.Simulator(converter.net, minibatch_size=BATCH_SIZE, progress_bar=True) as sim:
+    sim.compile(
+        optimizer="adam",
+        loss=tf.keras.losses.CategoricalCrossentropy(),
+        metrics=["accuracy"],
     )
-    ann_start = time()
-    converter.model.fit(
-        x_train, y_train, epochs=N_EPOCHS, batch_size=BATCH_SIZE, 
-        validation_data=(x_test, y_test), verbose=1
+
+    sim.fit(
+        {converter.inputs[inp]: nengo_x_train},
+        {converter.outputs[out]: nengo_y_train},
+        validation_data=(
+            {converter.inputs[inp]: nengo_x_test},
+            {converter.outputs[out]: nengo_y_test},
+        ),
+        epochs=N_EPOCHS, verbose=1
     )
-    ann_end = time()
+    sim.save_params("Params/beans")
+    sim.load_params("Params/beans")
 
-    converter.model.save("Params/beans_ann.keras")
+    ann_data = sim.predict({converter.inputs[inp]: tiled_x_test})
 
-else:
-    converter.model = tf.keras.models.load_model("Params/beans_ann.keras")
+    # compute accuracy on test data, using output of network on the last timestep
+    nengo_ann_predictions = np.argmax(ann_data[converter.outputs[out]][:, -1], axis=-1)
+    nengo_ann_accuracy = models.get_test_acc(tiled_y_test, nengo_ann_predictions)
 
-# SNN Predict
-with nengo_dl.Simulator(converter.net, minibatch_size=16, progress_bar=True) as nengo_sim:
-    nengo_sim.load_params("Params/beans_snn")
+    with open("Results/beans.txt", "a") as file:
+        file.write(f"ANN Test Accuracy: {100 * nengo_ann_accuracy:.2f}%\n")
+    
+# Convert to SNN and Predict
+# out2-> snn_converter.outputs[out2]->
+snn_converter, inp2, out2 = models.get_models(len(beans.labels), TARGET_SHAPE, make_SNN=True)
+
+snn_inp = snn_converter.inputs[inp2] # Type-> Node
+snn_out = snn_converter.outputs[out2] # Type-> Probe
+
+with nengo_dl.Simulator(snn_converter.net, minibatch_size=16, progress_bar=True) as nengo_sim:
+    nengo_sim.load_params("Params/beans")
+
     # repeat inputs for some number of timesteps
-    data = nengo_sim.predict({converter.inputs[inp]: x_test})
+    snn_data = nengo_sim.predict({snn_inp: tiled_x_test})
 
-# compute accuracy on test data, using output of network on the last timestep
-snn_predictions = np.argmax(data[converter.outputs[out]][:, -1], axis=-1)
-snn_accuracy = (snn_predictions == y_test[:len(x_test)[0]]).mean()
+    # compute accuracy on test data, using output of network on the last timestep
+    snn_predictions = np.argmax(snn_data[snn_out][:, -1], axis=-1)
+    snn_accuracy = models.get_test_acc(tiled_y_test, snn_predictions)
 
-with open("Results/beans.txt", "a") as file:
-    file.write(f"SNN Test Accuracy: {100 * snn_accuracy:.2f}%")
-    if do_training:
-        file.write(f"SNN Training Time: {snn_end-snn_start:.2f}s")
+    with open("Results/beans.txt", "a") as file:
+        file.write(f"SNN Test Accuracy: {100 * snn_accuracy:.2f}%\n")
 
-# ANN Predict
-ann_loss, ann_accuracy = converter.model.evaluate(x_test, y_test)
-with open("Results/beans.txt", "a") as file:
-    file.write(f"ANN Test Accuracy: {100 * ann_accuracy:.2f}%")
-    if do_training:
-        file.write(f"ANN Training Time: {ann_end-ann_start:.2f}s")
