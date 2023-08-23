@@ -9,7 +9,6 @@ from scipy.ndimage import zoom
 
 # Define the model architecture
 def get_models(n_labels, img_shape, make_SNN=False):
-
     inp = Input(shape=img_shape)
     conv1 = Conv2D(32, kernel_size=(2, 2), activation=tf.nn.relu, padding="same") (inp)
     pool1 = AveragePooling2D((2, 2)) (conv1)
@@ -20,7 +19,6 @@ def get_models(n_labels, img_shape, make_SNN=False):
     out = Dense(n_labels, activation=tf.nn.softmax) (dense1)
     model = Model(inputs=[inp], outputs=[out])
 
-    # converter.model->ann, converter.net->snn
     if not make_SNN:
         converter = nengo_dl.Converter(model)
     else:
@@ -43,7 +41,7 @@ def condense_image(image, scale_factor):
 def get_test_acc(eval_set, preds):
     preds = preds.reshape(-1)
     n_correct = 0
-    for i in range(len(eval_set)):
+    for i in range(len(preds)):
         if int(preds[i]) == np.argmax(eval_set[i]):
             n_correct+=1
     return n_correct/len(eval_set)

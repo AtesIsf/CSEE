@@ -1,0 +1,2 @@
+ANN Test Accuracy: 67.18%
+SNN Test Accuracy: 40.92%

@@ -7,39 +7,40 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 import numpy as np
 
 import Models.models as models
-import Data.beans as beans
+import Data.fashion as fashion
 
 from tensorflow.keras.utils import to_categorical
 
 BATCH_SIZE = 8
 N_EPOCHS = 5
-SCALE_FACTOR = 0.3
-TARGET_SHAPE = (int(beans.SHAPE[0] * SCALE_FACTOR), int(beans.SHAPE[1] * SCALE_FACTOR), 3)
+SCALE_FACTOR = 1
+TARGET_SHAPE = (int(fashion.SHAPE[0] * SCALE_FACTOR), int(fashion.SHAPE[1] * SCALE_FACTOR), 1)
 N_TEST_TIME_STEPS = 20
 N_TRAIN_TIME_STEPS = 4
 
 def get_data():
-    x_train = np.zeros((len(beans.ds["train"]), *TARGET_SHAPE))
-    for i in range(len(beans.ds["train"])):
-        x_train[i] = models.condense_image(np.array(beans.ds["train"][i]["image"]), SCALE_FACTOR)
+    x_train = np.zeros((len(fashion.ds["train"]), *TARGET_SHAPE))
+    for i in range(len(fashion.ds["train"])):
+        x_train[i] = models.condense_image(np.array(fashion.ds["train"][i]["image"]), SCALE_FACTOR).reshape(*TARGET_SHAPE)
 
-    x_test = np.zeros((len(beans.ds["test"]), *TARGET_SHAPE))
-    for i in range(len(beans.ds["test"])):
-        x_test[i] = models.condense_image(np.array(beans.ds["test"][i]["image"]), SCALE_FACTOR)
+    x_test = np.zeros((len(fashion.ds["test"]), *TARGET_SHAPE))
+    for i in range(len(fashion.ds["test"])):
+        x_test[i] = models.condense_image(np.array(fashion.ds["test"][i]["image"]), SCALE_FACTOR).reshape(*TARGET_SHAPE)
 
-    y_train = np.zeros(len(beans.ds["train"]))
-    for i in range(len(beans.ds["train"])):
-        y_train[i] = beans.ds["train"][i]["labels"]
+    y_train = np.zeros(len(fashion.ds["train"]))
+    for i in range(len(fashion.ds["train"])):
+        y_train[i] = fashion.ds["train"][i]["label"]
     
-    y_test = np.zeros(len(beans.ds["test"]))
-    for i in range(len(beans.ds["test"])):
-        y_test[i] = beans.ds["test"][i]["labels"]
+    y_test = np.zeros(len(fashion.ds["test"]))
+    for i in range(len(fashion.ds["test"])):
+        y_test[i] = fashion.ds["test"][i]["label"]
+    
     return x_train, x_test, y_train, y_test
 
 x_train, x_test, y_train, y_test = get_data()
 
-y_train = to_categorical(y_train, beans.N_CLASSES)
-y_test = to_categorical(y_test, beans.N_CLASSES)
+y_train = to_categorical(y_train, fashion.N_CLASSES)
+y_test = to_categorical(y_test, fashion.N_CLASSES)
 
 # Add a time axis
 nengo_x_train = x_train.reshape((x_train.shape[0], 1, -1))
@@ -56,7 +57,7 @@ tiled_x_test = np.tile(nengo_x_test, (1, N_TEST_TIME_STEPS, 1))
 tiled_y_test = np.tile(y_test, N_TEST_TIME_STEPS)
 
 # inp->Node, out->KerasTensor, converter.outputs[out]->Probe
-converter, inp, out = models.get_models(beans.N_CLASSES, TARGET_SHAPE)
+converter, inp, out = models.get_models(fashion.N_CLASSES, TARGET_SHAPE)
 
 # Equ nengo ANN Train & Test
 with nengo_dl.Simulator(converter.net, minibatch_size=BATCH_SIZE, progress_bar=True) as sim:
@@ -76,7 +77,7 @@ with nengo_dl.Simulator(converter.net, minibatch_size=BATCH_SIZE, progress_bar=T
         epochs=N_EPOCHS, verbose=1
     )
     
-    sim.save_params("Params/beans")
+    sim.save_params("Params/fashion")
 
     ann_data = sim.predict({converter.inputs[inp]: tiled_x_test})
 
@@ -84,18 +85,18 @@ with nengo_dl.Simulator(converter.net, minibatch_size=BATCH_SIZE, progress_bar=T
     nengo_ann_predictions = np.argmax(ann_data[converter.outputs[out]][:, -1], axis=-1)
     nengo_ann_accuracy = models.get_test_acc(tiled_y_test, nengo_ann_predictions)
 
-    with open("Results/beans.txt", "a") as file:
+    with open("Results/fashion.txt", "a") as file:
         file.write(f"ANN Test Accuracy: {100 * nengo_ann_accuracy:.2f}%\n")
     
 # Convert to SNN and Predict
 # out2-> snn_converter.outputs[out2]->
-snn_converter, inp2, out2 = models.get_models(beans.N_CLASSES, TARGET_SHAPE, make_SNN=True)
+snn_converter, inp2, out2 = models.get_models(fashion.N_CLASSES, TARGET_SHAPE, make_SNN=True)
 
 snn_inp = snn_converter.inputs[inp2] # Type-> Node
 snn_out = snn_converter.outputs[out2] # Type-> Probe
 
 with nengo_dl.Simulator(snn_converter.net, minibatch_size=16, progress_bar=True) as nengo_sim:
-    nengo_sim.load_params("Params/beans")
+    nengo_sim.load_params("Params/fashion")
 
     # repeat inputs for some number of timesteps
     snn_data = nengo_sim.predict({snn_inp: tiled_x_test})
@@ -104,6 +105,6 @@ with nengo_dl.Simulator(snn_converter.net, minibatch_size=16, progress_bar=True)
     snn_predictions = np.argmax(snn_data[snn_out][:, -1], axis=-1)
     snn_accuracy = models.get_test_acc(tiled_y_test, snn_predictions)
 
-    with open("Results/beans.txt", "a") as file:
+    with open("Results/fashion.txt", "a") as file:
         file.write(f"SNN Test Accuracy: {100 * snn_accuracy:.2f}%\n")
 
