@@ -93,7 +93,7 @@ snn_converter, inp2, out2 = models.get_models(cifar.N_CLASSES, TARGET_SHAPE, mak
 snn_inp = snn_converter.inputs[inp2] # Type-> Node
 snn_out = snn_converter.outputs[out2] # Type-> Probe
 
-with nengo_dl.Simulator(snn_converter.net, minibatch_size=16, progress_bar=True) as nengo_sim:
+with nengo_dl.Simulator(snn_converter.net, minibatch_size=BATCH_SIZE, progress_bar=True) as nengo_sim:
     nengo_sim.load_params("Params/cifar")
 
     # repeat inputs for some number of timesteps

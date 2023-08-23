@@ -1,4 +1,5 @@
 https://huggingface.co/datasets/cifar10
 https://huggingface.co/datasets/beans
 https://huggingface.co/datasets/fashion_mnist
+https://huggingface.co/datasets/mnist
 https://huggingface.co/datasets/keremberke/shoe-classification
